@@ -4,22 +4,26 @@ namespace ECSAtmos.Util
 {
     public struct OffsetLogic
     {
-        public int3 Offset;
+        public byte XUpdateID;
+        public byte YUpdateID;
     }
 
     public static class OffsetUtil
     {
         public static void DoStep(this ref OffsetLogic offsetLogic)
         {
-            offsetLogic.Offset += new int3(1, 0, 0);
-            if (offsetLogic.Offset.x > 3)
+            offsetLogic.XUpdateID += 1;
+            
+            if (offsetLogic.XUpdateID > 3)
             {
-                offsetLogic.Offset = new int3(0, offsetLogic.Offset.y + 1, 0);
+                offsetLogic.XUpdateID = 0;
+                offsetLogic.YUpdateID += 1;
             }
 	         
-            if (offsetLogic.Offset.y > 3)
+            if (offsetLogic.YUpdateID > 3)
             {
-                offsetLogic.Offset = new int3(0, 0, 0);
+                offsetLogic.XUpdateID = 0;
+                offsetLogic.YUpdateID = 0;
             }
         }
     }

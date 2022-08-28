@@ -1,55 +1,62 @@
 using Systems.Atmospherics;
 using ECSAtmos.Components;
 using ECSAtmos.Util;
+using Systems.ECSAtmos.Util;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
 using Unity.Mathematics;
-using Unity.Transforms;
-using UnityEngine;
 
 namespace ECSAtmos.Systems
 {
     [BurstCompile]
-    [UpdateBefore(typeof(TileGasExchangeSystem))]
-    public class TileConductivitySystem : JobSystemBase
+    [UpdateInGroup(typeof(AtmosSystemGroup))]
+    [UpdateAfter(typeof(ConductivitySystem))]
+    public partial class TileConductivitySystem : AtmosSystemBase
     {
-        private OffsetLogic offset;
-        
-        private EntityQuery query;
+	    private EntityQuery query;
 
-        private float timer;
-        
-        protected override void OnCreate() {
-            this.query = GetEntityQuery(typeof(GasMixComponent), 
-                typeof(Translation), 
-                typeof(ConductivityComponent),
-                typeof(GasDataBuffer));
-        }
-        
-        protected override JobHandle OnUpdate(JobHandle inputDeps)
+        protected override void OnCreate()
         {
-            timer += Time.DeltaTime;
-            if (timer < 0.05f) return inputDeps;
-            timer = 0;
+	        var queryDesc = new EntityQueryDesc
+	        {
+		        All = new ComponentType[]
+		        {
+			        typeof(AtmosUpdateDataComponent),
+			        typeof(MetaDataTileComponent),
+			        typeof(GasMixComponent),
+			        typeof(ConductivityComponent),
+			        typeof(GasDataBuffer),
+			        typeof(TileAtmosTag)
+		        },
 
-            TileOpenToSolidConductivityJob job = new TileOpenToSolidConductivityJob() 
+		        None = new ComponentType[]
+		        {
+			        typeof(DeactivatedTag)
+		        }
+	        };
+
+	        query = GetEntityQuery(queryDesc);
+        }
+
+        protected override JobHandle Update(JobHandle inputDeps, OffsetLogic offset)
+        {
+	        TileOpenToSolidConductivityJob job = new TileOpenToSolidConductivityJob
             {
                 entityTypeHandle = GetEntityTypeHandle(),
-		              
-                offset = offset.Offset,
-		              
+
+                offset = offset,
+
                 allGasMix = GetComponentDataFromEntity<GasMixComponent>(),
+                allGasData = GetBufferFromEntity<GasDataBuffer>(true),
                 allConductivity = GetComponentDataFromEntity<ConductivityComponent>(),
-                allMetaDataTile = GetComponentDataFromEntity<MetaDataTileComponent>(),
-                allTranslation = GetComponentDataFromEntity<Translation>(),
+
+                allUpdateData = GetComponentDataFromEntity<AtmosUpdateDataComponent>(true),
+                allMetaData = GetComponentDataFromEntity<MetaDataTileComponent>(true)
             };
 
-            //Increase offset for next update
-            offset.DoStep();
-     
-            return job.ScheduleParallel(this.query, 1, inputDeps);
+            return job.ScheduleParallel(query, inputDeps);
         }
     }
 
@@ -57,40 +64,52 @@ namespace ECSAtmos.Systems
     public struct TileOpenToSolidConductivityJob : IJobEntityBatch
     {
         [ReadOnly]
-        public int3 offset;
-        
+        public OffsetLogic offset;
+
         [ReadOnly]
         public EntityTypeHandle entityTypeHandle;
-        
+
         //Writing and Reading from these, this is thread safe as tiles are only access once in an area so no conflicts
         [NativeDisableParallelForRestriction]
         public ComponentDataFromEntity<GasMixComponent> allGasMix;
+
+        [ReadOnly]
+        [NativeDisableParallelForRestriction]
+        public BufferFromEntity<GasDataBuffer> allGasData;
+
         [NativeDisableParallelForRestriction]
         public ComponentDataFromEntity<ConductivityComponent> allConductivity;
-        [NativeDisableParallelForRestriction]
-        public ComponentDataFromEntity<MetaDataTileComponent> allMetaDataTile;
-	        
+
         [ReadOnly]
-        public ComponentDataFromEntity<Translation> allTranslation;
-        
+        [NativeDisableParallelForRestriction]
+        public ComponentDataFromEntity<MetaDataTileComponent> allMetaData;
+
+        [ReadOnly]
+        [NativeDisableParallelForRestriction]
+        public ComponentDataFromEntity<AtmosUpdateDataComponent> allUpdateData;
+
         public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
         {
             for (int i = 0; i < batchInChunk.Count; ++i)
             {
                 var entity = batchInChunk.GetNativeArray(entityTypeHandle)[i];
-                int3 worldPos = new int3(allTranslation[entity].Value);
-                var pos = worldPos + offset;
-                
-                //This basically means that every forth tile is allowed to do an update but the offset changes to allow
-                //all tiles to update after the system has been called multiple times
-                if (pos.x % 3 != 0 || pos.y % 3 != 0) continue;
-                
-                //TODO current unitystation has this, might not be needed to check, just always conduct?
-                //if (node.IsOccupied && node.IsIsolatedNode) continue;
-                
+
+                var currentUpdateData = allUpdateData[entity];
+
+                //This basically means that every forth tile is allowed to do an update
+                //But we alternate which ones every step (I would draw a shitty paint diagram to explain but i cant draw)
+                //Basically means every forth update every tile will have done an update
+                //NOTE: because of this we don't update two tiles in the same frame therefore can disable writing safeties in the job
+                if (currentUpdateData.XUpdateID != offset.XUpdateID ||
+                    currentUpdateData.YUpdateID != offset.YUpdateID) continue;
+
+                var currentMetaData = allMetaData[entity];
+
+                if (currentMetaData.IsSolid && currentMetaData.IsIsolatedNode == false) continue;
+
                 var conductivity = allConductivity[entity];
                 var gasMix = allGasMix[entity];
-                
+
                 var tempDelta = conductivity.ConductivityTemperature - gasMix.Temperature;
 
                 if (math.abs(tempDelta) <= AtmosDefines.MINIMUM_TEMPERATURE_DELTA_TO_CONSIDER) continue;
@@ -98,7 +117,7 @@ namespace ECSAtmos.Systems
                 if (gasMix.WholeHeatCapacity <= AtmosConstants.MINIMUM_HEAT_CAPACITY) continue;
 
                 if(conductivity.HeatCapacity <= AtmosConstants.MINIMUM_HEAT_CAPACITY) continue;
-                
+
                 //The larger the combined capacity the less is shared
                 var heat = conductivity.ThermalConductivity * tempDelta *
                            (conductivity.HeatCapacity * gasMix.WholeHeatCapacity /
@@ -108,10 +127,12 @@ namespace ECSAtmos.Systems
                     conductivity.ConductivityTemperature - (heat / conductivity.HeatCapacity),
                     AtmosDefines.SPACE_TEMPERATURE);
 
-                gasMix.SetTemperature(math.max(
-                    gasMix.Temperature + (heat / gasMix.WholeHeatCapacity),
+                var buffer = allGasData[entity];
+
+                gasMix.SetTemperature(in buffer,
+	                math.max(gasMix.Temperature + (heat / gasMix.WholeHeatCapacity),
                     AtmosDefines.SPACE_TEMPERATURE));
-                
+
                 allGasMix[entity] = gasMix;
 
                 //Do atmos update for the Solid node if temperature is allowed so it can do conduction
@@ -130,11 +151,6 @@ namespace ECSAtmos.Systems
                     conductivity.StartingSuperConduct = true;
                     allConductivity[entity] = conductivity;
                 }
-
-                //Poke the tile to do an update if needed
-                var metaDataTileComponent = allMetaDataTile[entity];
-                metaDataTileComponent.Sleeping = false;
-                allMetaDataTile[entity] = metaDataTileComponent;
             }
         }
     }

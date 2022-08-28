@@ -1,32 +1,44 @@
 using System;
 using ECSAtmos.Systems;
+using Unity.Burst;
 using Unity.Entities;
+using Unity.Mathematics;
 
 namespace ECSAtmos.Components
 {
     public struct MetaDataTileComponent : IComponentData
     {
+	    public int3 TileLocalPos;
+
+	    public int MatrixId;
+
         /// <summary>
         /// If this node is in a closed room, it's assigned to it by the room's number
-        /// Set to -1 on spawn
+        /// Set to 0 on spawn
         /// </summary>
         public int RoomNumber;
-        
+
         /// <summary>
         /// Type of this node.
         /// </summary>
         public NodeType NodeType;
-        
+
         /// <summary>
         /// Type of this node.
         /// </summary>
-        public BlockType BlockType;
-        
+        public NodeOccupiedType OccupiedType;
+
         /// <summary>
-        /// Is this tile occupied by something impassable (airtight!)
+        /// Does this tile contain a closed airlock/shutters? Prevents gas exchange to adjacent tiles
+        /// (used for gas freezing)
         /// </summary>
-        public bool IsOccupied => NodeType == NodeType.Occupied;
-        
+        public bool IsIsolatedNode => OccupiedType == NodeOccupiedType.Full;
+
+        /// <summary>
+        /// Solid tiles such as walls
+        /// </summary>
+        public bool IsSolid => OccupiedType == NodeOccupiedType.Solid;
+
         /// <summary>
         /// Is this tile in space
         /// </summary>
@@ -36,24 +48,17 @@ namespace ECSAtmos.Components
         /// Is this tile in a room
         /// </summary>
         public bool IsRoom => NodeType == NodeType.Room;
-        
-        public bool Sleeping;
-        
-        //Debug stuff
-        public bool Updated;
-        public bool TriedToUpdate;
     }
-    
+
     /// <summary>
     /// Used to store the neighboring atmos entity tiles
     /// </summary>
     [InternalBufferCapacity(4)]
-    public struct MetaDataTileBuffer : IBufferElementData
+    public struct NeighbourBuffer : IBufferElementData
     {
-        public TileNeighbourSystem.Data Data;
-        public Entity DataTile => Data.Entity;
+        public Entity NeighbourEntity;
     }
-    
+
     public enum NodeType : byte
     {
         None,
@@ -64,24 +69,24 @@ namespace ECSAtmos.Components
         /// <summary>
         /// Node in a room on a tile that is not occupied.
         /// </summary>
-        Room,
-        /// <summary>
-        /// Node occupied by something such that it is not passable or atmos passable
-        /// </summary>
-        Occupied
+        Room
     }
-    
+
     /// <summary>
     /// Directionally atmos impassable
     /// </summary>
     [Flags]
-    public enum BlockType : byte
+    public enum NodeOccupiedType : byte
     {
-        None = 0,
-        Up = 1 << 0,
-        Down = 1 << 1,
+	    None = 0,
+        Right = 1 << 0,
+        Up = 1 << 1,
         Left = 1 << 2,
-        Right = 1 << 3,
-        All = Up | Down | Left| Right
+        Down = 1 << 3,
+
+        //Atmos blocked on all sides (is an isolated node e.g closed door), but atmos still runs on tile (reactions)
+        Full = Up | Right | Down | Left,
+
+        Solid = 1 << 4
     }
 }

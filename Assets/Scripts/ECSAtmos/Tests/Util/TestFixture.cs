@@ -39,27 +39,6 @@ namespace Unity.Entities.Tests
             return EntityManager.GetBufferFromEntity<T>(isReadOnly);
         }
     }
-#else
-    public class EmptySystem : JobComponentSystem
-    {
-        protected override JobHandle OnUpdate(JobHandle dep) { return dep; }
-
-
-        new public EntityQuery GetEntityQuery(params EntityQueryDesc[] queriesDesc)
-        {
-            return base.GetEntityQuery(queriesDesc);
-        }
-
-        new public EntityQuery GetEntityQuery(params ComponentType[] componentTypes)
-        {
-            return base.GetEntityQuery(componentTypes);
-        }
-
-        new public EntityQuery GetEntityQuery(NativeArray<ComponentType> componentTypes)
-        {
-            return base.GetEntityQuery(componentTypes);
-        }
-    }
 
 #endif
 
@@ -204,22 +183,6 @@ namespace Unity.Entities.Tests
         class EntityForEachSystem : ComponentSystem
         {
             protected override void OnUpdate() { }
-        }
-        // This doesn't seem to be used but will leave it for now
-        // protected EntityQueryBuilder Entities
-        // {
-        //     get
-        //     {
-        //         return new EntityQueryBuilder(World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<EntityForEachSystem>());
-        //     }
-        // }
-
-        public EmptySystem EmptySystem
-        {
-            get
-            {
-                return World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<EmptySystem>();
-            }
         }
     }
 }

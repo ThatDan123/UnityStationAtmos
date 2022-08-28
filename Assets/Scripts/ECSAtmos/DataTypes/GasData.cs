@@ -1,15 +1,18 @@
 using System;
+using Unity.Entities;
 
 namespace ECSAtmos.DataTypes
 {
     [Serializable]
     public struct GasData
     {
-        public byte GasSO;
-
-        //Moles of this gas type
+	    //Moles of this gas type
         public float Moles;
-        
-        public float MolarHeatCapacity;
+
+        public byte GasSO => GasInfo.GasSO;
+
+        public GasInfo GasInfo => GasInfoReference.Value;
+
+        public BlobAssetReference<GasInfo> GasInfoReference;
     }
 }

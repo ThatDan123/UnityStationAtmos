@@ -1,19 +1,17 @@
 using Systems.Atmospherics;
 using ECSAtmos.DataTypes;
 using Unity.Burst;
-using Unity.Collections;
 using Unity.Entities;
-using UnityEngine;
 
 namespace ECSAtmos.Components
 {
     public struct GasMixComponent : IComponentData
     {
         //Note: GasDataBuffer holds the gas data for this component as we can't use native arrays inside components
-        
-        /// <summary>In moles.</summary>
-        public float Moles;
-        
+
+        /// <summary>In moles. CALL RECALCULATE BEFORE USE</summary>
+        public float Moles{ get; private set; }
+
         /// <summary>In kPa.</summary>
         public float Pressure;
 
@@ -22,14 +20,14 @@ namespace ECSAtmos.Components
 
         /// <summary>In Kelvin.</summary>
         public float Temperature;
-        
-        /// <summary>In Joules/Kelvin.</summary>
-        public float WholeHeatCapacity;
-        
-        /// <summary>In Joules?.</summary>
-        internal float InternalEnergy;
 
-        public GasMixComponent(ref DynamicBuffer<GasDataBuffer> buffer, 
+        /// <summary>In Joules/Kelvin. CALL RECALCULATE BEFORE USE</summary>
+        public float WholeHeatCapacity{ get; private set; }
+
+        /// <summary>In Joules?. CALL RECALCULATE BEFORE USE</summary>
+        public float InternalEnergy { get; private set; }
+
+        public GasMixComponent(in DynamicBuffer<GasDataBuffer> buffer,
             float pressure = 0, float volume = AtmosConstants.TileVolume, float temperature = AtmosConstants.KOffsetC + 20)
         {
             Pressure = pressure;
@@ -39,48 +37,51 @@ namespace ECSAtmos.Components
             Moles = 0;
             InternalEnergy = 0;
             WholeHeatCapacity = 0;
-            this.ReCalculate(in buffer);
+
+            SetValues(in buffer);
+        }
+
+        public void SetValues(in DynamicBuffer<GasDataBuffer> gasDataBuffer)
+        {
+	        Moles = 0;
+	        WholeHeatCapacity = 0;
+	        InternalEnergy = 0;
+
+	        for (int i = 0; i < gasDataBuffer.Length; i++)
+	        {
+		        var gas = gasDataBuffer[i];
+		        Moles += gas.GasData.Moles;
+		        WholeHeatCapacity += gas.GasData.GasInfo.MolarHeatCapacity * gas.GasData.Moles;
+	        }
+
+	        if (float.IsNaN(Moles))
+	        {
+		        Moles = 0;
+	        }
+
+	        InternalEnergy = WholeHeatCapacity * Temperature;
         }
     }
 
     [BurstCompile]
     public static class GasMixUtil
     {
-        public static void ReCalculate(this ref GasMixComponent gasMixComponent, in DynamicBuffer<GasDataBuffer> gasDataBuffer)
+        public static void Recalculate(this ref GasMixComponent gasMixComponent, in DynamicBuffer<GasDataBuffer> gasDataBuffer)
         {
-            ResetValues(ref gasMixComponent);
-            SetValues(ref gasMixComponent, in gasDataBuffer);
-        }
-        
-        private static void ResetValues(ref GasMixComponent gasMixComponent)
-        {
-            gasMixComponent.Moles = 0;
-            gasMixComponent.WholeHeatCapacity = 0;
-            gasMixComponent.InternalEnergy = 0;
+	        SetValues(ref gasMixComponent, in gasDataBuffer);
         }
 
         private static void SetValues(ref GasMixComponent gasMixComponent, in DynamicBuffer<GasDataBuffer> gasDataBuffer)
         {
-            for (int i = 0; i < gasDataBuffer.Length; i++)
-            {
-                var gas = gasDataBuffer[i];
-                gasMixComponent.Moles += gas.GasData.Moles;
-                gasMixComponent.WholeHeatCapacity += gas.GasData.MolarHeatCapacity * gas.GasData.Moles;
-            }
-            
-            if (float.IsNaN(gasMixComponent.Moles))
-            {
-                gasMixComponent.Moles = 0;
-            }
-            
-            gasMixComponent.InternalEnergy = gasMixComponent.WholeHeatCapacity * gasMixComponent.Temperature;
+	        gasMixComponent.SetValues(in gasDataBuffer);
         }
 
-        public static void CalcPressure(this ref GasMixComponent gasMixComponent)
+        public static void CalcPressure(this ref GasMixComponent gasMixComponent, in DynamicBuffer<GasDataBuffer> gasDataBuffer)
         {
+	        gasMixComponent.Recalculate(in gasDataBuffer);
             gasMixComponent.Pressure = CalcPressure(gasMixComponent.Volume, gasMixComponent.Moles, gasMixComponent.Temperature);
         }
-        
+
         public static float CalcPressure(float volume, float moles, float temperature)
         {
             if (temperature > 0 && moles > 0 && volume > 0)
@@ -90,9 +91,10 @@ namespace ECSAtmos.Components
 
             return 0;
         }
-        
-        public static void CalcVolume(this ref GasMixComponent gasMixComponent)
+
+        public static void CalcVolume(this ref GasMixComponent gasMixComponent, in DynamicBuffer<GasDataBuffer> gasDataBuffer)
         {
+	        gasMixComponent.Recalculate(in gasDataBuffer);
             gasMixComponent.Volume = CalcVolume(gasMixComponent.Pressure, gasMixComponent.Moles, gasMixComponent.Temperature);
         }
 
@@ -105,11 +107,12 @@ namespace ECSAtmos.Components
 
             return 0;
         }
-        
-        public static void CalcMoles(this ref GasMixComponent gasMixComponent)
-        {
-            gasMixComponent.Moles = CalcMoles(gasMixComponent.Pressure, gasMixComponent.Volume, gasMixComponent.Temperature);
-        }
+
+        // public static void CalcMoles(this ref GasMixComponent gasMixComponent, in DynamicBuffer<GasDataBuffer> gasDataBuffer)
+        // {
+        // gasMixComponent.Recalculate(in gasDataBuffer);
+        //     gasMixComponent.Moles = CalcMoles(gasMixComponent.Pressure, gasMixComponent.Volume, gasMixComponent.Temperature);
+        // }
 
         public static float CalcMoles(float pressure, float volume, float temperature)
         {
@@ -120,9 +123,10 @@ namespace ECSAtmos.Components
 
             return 0;
         }
-        
-        public static void CalcTemperature(this ref GasMixComponent gasMixComponent)
+
+        public static void CalcTemperature(this ref GasMixComponent gasMixComponent, in DynamicBuffer<GasDataBuffer> gasDataBuffer)
         {
+	        gasMixComponent.Recalculate(in gasDataBuffer);
             gasMixComponent.Temperature = CalcTemperature(gasMixComponent.Pressure, gasMixComponent.Volume, gasMixComponent.Moles);
         }
 
@@ -135,20 +139,28 @@ namespace ECSAtmos.Components
 
             return AtmosDefines.SPACE_TEMPERATURE; //space radiation
         }
-        
-        public static void SetTemperature(this ref GasMixComponent gasMixComponent, float newTemperature)
+
+        public static void SetTemperature(this ref GasMixComponent gasMixComponent, in DynamicBuffer<GasDataBuffer> gasDataBuffer, float newTemperature)
         {
-            gasMixComponent.Temperature = newTemperature;
-            gasMixComponent.CalcPressure();
+	        if (newTemperature < AtmosDefines.SPACE_TEMPERATURE)
+	        {
+		        gasMixComponent.Temperature = AtmosDefines.SPACE_TEMPERATURE;
+	        }
+	        else
+	        {
+		        gasMixComponent.Temperature = newTemperature;
+	        }
+
+            gasMixComponent.CalcPressure(in gasDataBuffer);
         }
 
-        public static void SetPressure(this ref GasMixComponent gasMixComponent, float newPressure)
+        public static void SetPressure(this ref GasMixComponent gasMixComponent, in DynamicBuffer<GasDataBuffer> gasDataBuffer, float newPressure)
         {
             gasMixComponent.Pressure = newPressure;
-            gasMixComponent.CalcTemperature();
+            gasMixComponent.CalcTemperature(in gasDataBuffer);
         }
     }
-    
+
     public struct GasDataBuffer : IBufferElementData
     {
         public GasData GasData;

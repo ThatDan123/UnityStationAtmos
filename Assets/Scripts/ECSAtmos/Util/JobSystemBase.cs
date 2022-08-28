@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ECSAtmos.Util
 {
-    public abstract class JobSystemBase : SystemBase
+    public abstract partial class JobSystemBase : SystemBase
     {
         protected override void OnUpdate() 
         {
