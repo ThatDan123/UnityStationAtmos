@@ -77,7 +77,7 @@ namespace Unity.Entities.Tests
                 // holding on SharedComponentData making checks fail
                 while (World.Systems.Count > 0)
                 {
-                    World.DestroySystem(World.Systems[0]);
+                    World.DestroySystem(World.Systems[0].SystemHandle);
                 }
 
                 m_ManagerDebug.CheckInternalConsistency();
@@ -154,35 +154,6 @@ namespace Unity.Entities.Tests
             Assert.AreEqual(version, chunk.GetChangeVersion(type));
             Assert.IsFalse(chunk.DidChange(type, version));
             Assert.IsTrue(chunk.DidChange(type, version - 1));
-        }
-
-        public void AssetHasChunkOrderVersion(Entity e, uint version)
-        {
-            var chunk = m_Manager.GetChunk(e);
-            Assert.AreEqual(version, chunk.GetOrderVersion());
-        }
-
-        public void AssetHasBufferChangeVersion<T>(Entity e, uint version) where T : struct, IBufferElementData
-        {
-            var type = m_Manager.GetBufferTypeHandle<T>(true);
-            var chunk = m_Manager.GetChunk(e);
-            Assert.AreEqual(version, chunk.GetChangeVersion(type));
-            Assert.IsFalse(chunk.DidChange(type, version));
-            Assert.IsTrue(chunk.DidChange(type, version - 1));
-        }
-
-        public void AssetHasSharedChangeVersion<T>(Entity e, uint version) where T : struct, ISharedComponentData
-        {
-            var type = m_Manager.GetSharedComponentTypeHandle<T>();
-            var chunk = m_Manager.GetChunk(e);
-            Assert.AreEqual(version, chunk.GetChangeVersion(type));
-            Assert.IsFalse(chunk.DidChange(type, version));
-            Assert.IsTrue(chunk.DidChange(type, version - 1));
-        }
-
-        class EntityForEachSystem : ComponentSystem
-        {
-            protected override void OnUpdate() { }
         }
     }
 }

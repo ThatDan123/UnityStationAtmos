@@ -9,11 +9,11 @@ D:\Files\SS13 dev\Unity Editors\2022.2.0f1\Editor\Unity.exe
 -batchMode
 -noUpm
 -name
-AssetImportWorker0
+AssetImportWorker1
 -projectPath
 D:/Files/SS13 dev/UnityStationAtmos/UnityStationAtmos
 -logFile
-Logs/AssetImportWorker0.log
+Logs/AssetImportWorker1.log
 -srvPort
 60502
 Successfully changed project path to: D:/Files/SS13 dev/UnityStationAtmos/UnityStationAtmos
@@ -47,11 +47,11 @@ D:/Files/SS13 dev/UnityStationAtmos/UnityStationAtmos
     "memorysetup-temp-allocator-size-cloud-worker=32768"
     "memorysetup-temp-allocator-size-gi-baking-worker=262144"
     "memorysetup-temp-allocator-size-gfx=262144"
-Player connection [9952] Host "[IP] 192.168.1.4 [Port] 0 [Flags] 2 [Guid] 698430283 [EditorId] 698430283 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-PUATTEF) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" joined multi-casting on [225.0.0.222:54997]...
+Player connection [7064] Host "[IP] 192.168.1.4 [Port] 0 [Flags] 2 [Guid] 4122484185 [EditorId] 4122484185 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-PUATTEF) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" joined multi-casting on [225.0.0.222:54997]...
 
-Player connection [9952] Host "[IP] 192.168.1.4 [Port] 0 [Flags] 2 [Guid] 698430283 [EditorId] 698430283 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-PUATTEF) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" joined alternative multi-casting on [225.0.0.222:34997]...
+Player connection [7064] Host "[IP] 192.168.1.4 [Port] 0 [Flags] 2 [Guid] 4122484185 [EditorId] 4122484185 [Version] 1048832 [Id] WindowsEditor(7,DESKTOP-PUATTEF) [Debug] 1 [PackageName] WindowsEditor [ProjectName] Editor" joined alternative multi-casting on [225.0.0.222:34997]...
 
-Refreshing native plugins compatible for Editor in 100.66 ms, found 3 plugins.
+Refreshing native plugins compatible for Editor in 100.77 ms, found 3 plugins.
 Preloading 0 native plugins for Editor in 0.00 ms.
 Initialize engine version: 2022.2.0f1 (35dcd44975df)
 [Subsystems] Discovering subsystems at path D:/Files/SS13 dev/Unity Editors/2022.2.0f1/Editor/Data/Resources/UnitySubsystems
@@ -67,41 +67,41 @@ Initialize mono
 Mono path[0] = 'D:/Files/SS13 dev/Unity Editors/2022.2.0f1/Editor/Data/Managed'
 Mono path[1] = 'D:/Files/SS13 dev/Unity Editors/2022.2.0f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-win32'
 Mono config path = 'D:/Files/SS13 dev/Unity Editors/2022.2.0f1/Editor/Data/MonoBleedingEdge/etc'
-Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56624
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56796
 Begin MonoManager ReloadAssembly
 Registering precompiled unity dll's ...
 Register platform support module: D:/Files/SS13 dev/Unity Editors/2022.2.0f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
-Registered in 0.004231 seconds.
-- Loaded All Assemblies, in  0.272 seconds
+Registered in 0.004433 seconds.
+- Loaded All Assemblies, in  0.276 seconds
 Native extension for WindowsStandalone target not found
 Mono: successfully reloaded assembly
-- Finished resetting the current domain, in  0.241 seconds
+- Finished resetting the current domain, in  0.229 seconds
 Domain Reload Profiling:
-	ReloadAssembly (156ms)
-		BeginReloadAssembly (63ms)
+	ReloadAssembly (155ms)
+		BeginReloadAssembly (60ms)
 			ExecutionOrderSort (0ms)
 			DisableScriptedObjects (0ms)
 			BackupInstance (0ms)
 			ReleaseScriptingObjects (0ms)
 			CreateAndSetChildDomain (1ms)
 		LoadAllAssembliesAndSetupDomain (0ms)
-			LoadAssemblies (62ms)
+			LoadAssemblies (59ms)
 			RebuildTransferFunctionScriptingTraits (0ms)
-			SetupTypeCache (114ms)
-				TypeCache.Initialize (113ms)
-					TypeCache.ScanAssembly (112ms)
+			SetupTypeCache (118ms)
+				TypeCache.Initialize (117ms)
+					TypeCache.ScanAssembly (116ms)
 				ResolveRequiredComponents (0ms)
 		FinalizeReload (0ms)
 			ReleaseScriptCaches (0ms)
 			RebuildScriptCaches (0ms)
-			SetupLoadedEditorAssemblies (191ms)
+			SetupLoadedEditorAssemblies (181ms)
 				LogAssemblyErrors (0ms)
 				InitializePlatformSupportModulesInManaged (7ms)
 				SetLoadedEditorAssemblies (6ms)
 				RefreshPlugins (0ms)
 				BeforeProcessingInitializeOnLoad (1ms)
-				ProcessInitializeOnLoadAttributes (132ms)
-				ProcessInitializeOnLoadMethodAttributes (44ms)
+				ProcessInitializeOnLoadAttributes (121ms)
+				ProcessInitializeOnLoadMethodAttributes (46ms)
 				AfterProcessingInitializeOnLoad (0ms)
 				EditorAssembliesLoaded (0ms)
 			ExecutionOrderSort2 (0ms)
@@ -111,11 +111,11 @@ Assembly reference Packages/com.unity.entities/Unity.Scenes.Editor/Internals/Pro
 Worker process is ready to serve import requests
 Assembly reference Packages/com.unity.entities/Unity.Scenes.Editor/Internals/Properties/Unity.Properties.Internals.asmref has no target assembly definition
 Begin MonoManager ReloadAssembly
-- Loaded All Assemblies, in  0.674 seconds
-Refreshing native plugins compatible for Editor in 4.07 ms, found 3 plugins.
+- Loaded All Assemblies, in  0.671 seconds
+Refreshing native plugins compatible for Editor in 3.95 ms, found 3 plugins.
 Native extension for WindowsStandalone target not found
 Assembly reference Packages/com.unity.entities/Unity.Scenes.Editor/Internals/Properties/Unity.Properties.Internals.asmref has no target assembly definition
-TypeManager.Initialize took: 102ms
+TypeManager.Initialize took: 104ms
 ECSAtmos.Systems.AtmosEndEntityCommandBufferSystem is decorated with UnityEngine.ExecuteAlways. Support for this attribute on systems is deprecated as it is meant for MonoBehaviours only. Please use the [WorldSystemFilter] attribute to specify if you want to ensure your system is added and runs in the Editor (Editor) and/or Player (Default) default world. You can specify [WorldSystemFilter(Editor | Default] for both.
 UnityEngine.StackTraceUtility:ExtractStackTrace ()
 UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
@@ -149,44 +149,44 @@ UnityEditor.EditorAssemblies:ProcessInitializeOnLoadAttributes (System.Type[])
 (Filename: Library/PackageCache/com.unity.entities@1.0.0-pre.15/Unity.Entities/Stubs/Unity/Debug.cs Line: 15)
 
 Mono: successfully reloaded assembly
-- Finished resetting the current domain, in  0.766 seconds
+- Finished resetting the current domain, in  0.756 seconds
 Domain Reload Profiling:
-	ReloadAssembly (188ms)
-		BeginReloadAssembly (100ms)
+	ReloadAssembly (183ms)
+		BeginReloadAssembly (97ms)
 			ExecutionOrderSort (0ms)
 			DisableScriptedObjects (4ms)
 			BackupInstance (0ms)
 			ReleaseScriptingObjects (0ms)
 			CreateAndSetChildDomain (18ms)
-		LoadAllAssembliesAndSetupDomain (485ms)
-			LoadAssemblies (75ms)
+		LoadAllAssembliesAndSetupDomain (486ms)
+			LoadAssemblies (78ms)
 			RebuildTransferFunctionScriptingTraits (0ms)
-			SetupTypeCache (457ms)
-				TypeCache.Initialize (253ms)
-					TypeCache.ScanAssembly (249ms)
-				ResolveRequiredComponents (2ms)
+			SetupTypeCache (454ms)
+				TypeCache.Initialize (249ms)
+					TypeCache.ScanAssembly (246ms)
+				ResolveRequiredComponents (3ms)
 		FinalizeReload (0ms)
 			ReleaseScriptCaches (0ms)
 			RebuildScriptCaches (0ms)
-			SetupLoadedEditorAssemblies (631ms)
+			SetupLoadedEditorAssemblies (623ms)
 				LogAssemblyErrors (0ms)
 				InitializePlatformSupportModulesInManaged (5ms)
 				SetLoadedEditorAssemblies (7ms)
 				RefreshPlugins (0ms)
 				BeforeProcessingInitializeOnLoad (70ms)
-				ProcessInitializeOnLoadAttributes (417ms)
-				ProcessInitializeOnLoadMethodAttributes (130ms)
+				ProcessInitializeOnLoadAttributes (416ms)
+				ProcessInitializeOnLoadMethodAttributes (122ms)
 				AfterProcessingInitializeOnLoad (3ms)
 				EditorAssembliesLoaded (0ms)
 			ExecutionOrderSort2 (0ms)
 			AwakeInstancesAfterBackupRestoration (6ms)
 Launched and connected shader compiler UnityShaderCompiler.exe after 0.04 seconds
-Refreshing native plugins compatible for Editor in 3.67 ms, found 3 plugins.
+Refreshing native plugins compatible for Editor in 3.45 ms, found 3 plugins.
 Preloading 0 native plugins for Editor in 0.00 ms.
 Unloading 4078 Unused Serialized files (Serialized files now loaded: 0)
 Unloading 49 unused Assets / (77.7 KB). Loaded Objects now: 4529.
 Memory consumption went from 0.61 GB to 0.61 GB.
-Total: 4.870000 ms (FindLiveObjects: 0.299500 ms CreateObjectMapping: 0.346800 ms MarkObjects: 4.126100 ms  DeleteObjects: 0.097000 ms)
+Total: 4.854400 ms (FindLiveObjects: 0.325000 ms CreateObjectMapping: 0.431400 ms MarkObjects: 3.998000 ms  DeleteObjects: 0.099200 ms)
 
 AssetImportParameters requested are different than current active one (requested -> active):
   custom:DOTSType/UnityEditor.Snap.SnapSettingsWindow: 5fb792d44d0bbc465fb792d44d0bbc46 -> 
@@ -1506,22 +1506,22 @@ AssetImportParameters requested are different than current active one (requested
   custom:DOTSType/UnityEditor.U2D.Sprites.SpriteUtilityWindow: de20efecf6e18635de20efecf6e18635 -> 
 ========================================================================
 Received Import Request.
-  Time since last request: 14191.859670 seconds.
-  path: Assets/Scenes
-  artifactKey: Guid(bde7ac58a73a1e44e80c1beb35c87f72) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
+  Time since last request: 14191.860961 seconds.
+  path: Assets/Scripts/ECSAtmos/Tests/ECSAtmosTests.asmdef
+  artifactKey: Guid(34003f89dce64960889c9a2822f2f63a) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
 Number of updated assets reloaded before import = 0
-Start importing Assets/Scenes using Guid(bde7ac58a73a1e44e80c1beb35c87f72) Importer(815301076,1909f56bfc062723c751e8b465ee728b)  -> (artifact id: '93d9f81db7a0244f49887a17bb64e51e') in 0.006280 seconds 
+Start importing Assets/Scripts/ECSAtmos/Tests/ECSAtmosTests.asmdef using Guid(34003f89dce64960889c9a2822f2f63a) Importer(815301076,1909f56bfc062723c751e8b465ee728b)  -> (artifact id: 'e1e8af166831658f3c8b5b3669c2081b') in 0.034393 seconds 
 Number of asset objects unloaded after import = 0
 ========================================================================
 Received Prepare
 Assembly reference Packages/com.unity.entities/Unity.Scenes.Editor/Internals/Properties/Unity.Properties.Internals.asmref has no target assembly definition
 Assembly reference Packages/com.unity.entities/Unity.Scenes.Editor/Internals/Properties/Unity.Properties.Internals.asmref has no target assembly definition
 Begin MonoManager ReloadAssembly
-- Loaded All Assemblies, in  0.626 seconds
-Refreshing native plugins compatible for Editor in 3.55 ms, found 3 plugins.
+- Loaded All Assemblies, in  0.644 seconds
+Refreshing native plugins compatible for Editor in 3.52 ms, found 3 plugins.
 Native extension for WindowsStandalone target not found
 Assembly reference Packages/com.unity.entities/Unity.Scenes.Editor/Internals/Properties/Unity.Properties.Internals.asmref has no target assembly definition
-TypeManager.Initialize took: 103ms
+TypeManager.Initialize took: 129ms
 ECSAtmos.Systems.AtmosEndEntityCommandBufferSystem is decorated with UnityEngine.ExecuteAlways. Support for this attribute on systems is deprecated as it is meant for MonoBehaviours only. Please use the [WorldSystemFilter] attribute to specify if you want to ensure your system is added and runs in the Editor (Editor) and/or Player (Default) default world. You can specify [WorldSystemFilter(Editor | Default] for both.
 UnityEngine.StackTraceUtility:ExtractStackTrace ()
 UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
@@ -1555,43 +1555,43 @@ UnityEditor.EditorAssemblies:ProcessInitializeOnLoadAttributes (System.Type[])
 (Filename: Library/PackageCache/com.unity.entities@1.0.0-pre.15/Unity.Entities/Stubs/Unity/Debug.cs Line: 15)
 
 Mono: successfully reloaded assembly
-- Finished resetting the current domain, in  0.877 seconds
+- Finished resetting the current domain, in  0.907 seconds
 Domain Reload Profiling:
-	ReloadAssembly (179ms)
+	ReloadAssembly (178ms)
 		BeginReloadAssembly (117ms)
 			ExecutionOrderSort (0ms)
 			DisableScriptedObjects (6ms)
 			BackupInstance (0ms)
 			ReleaseScriptingObjects (0ms)
 			CreateAndSetChildDomain (42ms)
-		LoadAllAssembliesAndSetupDomain (446ms)
+		LoadAllAssembliesAndSetupDomain (465ms)
 			LoadAssemblies (67ms)
 			RebuildTransferFunctionScriptingTraits (0ms)
-			SetupTypeCache (421ms)
-				TypeCache.Initialize (232ms)
-					TypeCache.ScanAssembly (227ms)
-				ResolveRequiredComponents (2ms)
+			SetupTypeCache (440ms)
+				TypeCache.Initialize (237ms)
+					TypeCache.ScanAssembly (233ms)
+				ResolveRequiredComponents (3ms)
 		FinalizeReload (0ms)
 			ReleaseScriptCaches (0ms)
 			RebuildScriptCaches (0ms)
-			SetupLoadedEditorAssemblies (609ms)
+			SetupLoadedEditorAssemblies (633ms)
 				LogAssemblyErrors (0ms)
 				InitializePlatformSupportModulesInManaged (10ms)
-				SetLoadedEditorAssemblies (6ms)
+				SetLoadedEditorAssemblies (8ms)
 				RefreshPlugins (0ms)
-				BeforeProcessingInitializeOnLoad (71ms)
-				ProcessInitializeOnLoadAttributes (404ms)
-				ProcessInitializeOnLoadMethodAttributes (115ms)
+				BeforeProcessingInitializeOnLoad (70ms)
+				ProcessInitializeOnLoadAttributes (425ms)
+				ProcessInitializeOnLoadMethodAttributes (116ms)
 				AfterProcessingInitializeOnLoad (3ms)
 				EditorAssembliesLoaded (0ms)
 			ExecutionOrderSort2 (0ms)
 			AwakeInstancesAfterBackupRestoration (6ms)
-Refreshing native plugins compatible for Editor in 3.73 ms, found 3 plugins.
+Refreshing native plugins compatible for Editor in 3.47 ms, found 3 plugins.
 Preloading 0 native plugins for Editor in 0.00 ms.
 Unloading 4070 Unused Serialized files (Serialized files now loaded: 0)
 Unloading 40 unused Assets / (44.2 KB). Loaded Objects now: 4534.
 Memory consumption went from 0.61 GB to 0.61 GB.
-Total: 4.445700 ms (FindLiveObjects: 0.283200 ms CreateObjectMapping: 0.312500 ms MarkObjects: 3.805100 ms  DeleteObjects: 0.044100 ms)
+Total: 4.624900 ms (FindLiveObjects: 0.284000 ms CreateObjectMapping: 0.270500 ms MarkObjects: 4.012800 ms  DeleteObjects: 0.056900 ms)
 
 AssetImportParameters requested are different than current active one (requested -> active):
   custom:DOTSType/UnityEditor.Snap.SnapSettingsWindow: 5fb792d44d0bbc465fb792d44d0bbc46 -> 
@@ -2914,11 +2914,11 @@ Received Prepare
 Assembly reference Packages/com.unity.entities/Unity.Scenes.Editor/Internals/Properties/Unity.Properties.Internals.asmref has no target assembly definition
 Assembly reference Packages/com.unity.entities/Unity.Scenes.Editor/Internals/Properties/Unity.Properties.Internals.asmref has no target assembly definition
 Begin MonoManager ReloadAssembly
-- Loaded All Assemblies, in  0.623 seconds
-Refreshing native plugins compatible for Editor in 3.64 ms, found 3 plugins.
+- Loaded All Assemblies, in  0.622 seconds
+Refreshing native plugins compatible for Editor in 3.60 ms, found 3 plugins.
 Native extension for WindowsStandalone target not found
 Assembly reference Packages/com.unity.entities/Unity.Scenes.Editor/Internals/Properties/Unity.Properties.Internals.asmref has no target assembly definition
-TypeManager.Initialize took: 96ms
+TypeManager.Initialize took: 95ms
 ECSAtmos.Systems.AtmosEndEntityCommandBufferSystem is decorated with UnityEngine.ExecuteAlways. Support for this attribute on systems is deprecated as it is meant for MonoBehaviours only. Please use the [WorldSystemFilter] attribute to specify if you want to ensure your system is added and runs in the Editor (Editor) and/or Player (Default) default world. You can specify [WorldSystemFilter(Editor | Default] for both.
 UnityEngine.StackTraceUtility:ExtractStackTrace ()
 UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[])
@@ -2952,43 +2952,43 @@ UnityEditor.EditorAssemblies:ProcessInitializeOnLoadAttributes (System.Type[])
 (Filename: Library/PackageCache/com.unity.entities@1.0.0-pre.15/Unity.Entities/Stubs/Unity/Debug.cs Line: 15)
 
 Mono: successfully reloaded assembly
-- Finished resetting the current domain, in  0.846 seconds
+- Finished resetting the current domain, in  0.838 seconds
 Domain Reload Profiling:
-	ReloadAssembly (179ms)
-		BeginReloadAssembly (119ms)
+	ReloadAssembly (176ms)
+		BeginReloadAssembly (114ms)
 			ExecutionOrderSort (0ms)
 			DisableScriptedObjects (6ms)
 			BackupInstance (0ms)
 			ReleaseScriptingObjects (0ms)
 			CreateAndSetChildDomain (42ms)
-		LoadAllAssembliesAndSetupDomain (442ms)
-			LoadAssemblies (70ms)
+		LoadAllAssembliesAndSetupDomain (444ms)
+			LoadAssemblies (67ms)
 			RebuildTransferFunctionScriptingTraits (0ms)
-			SetupTypeCache (416ms)
+			SetupTypeCache (419ms)
 				TypeCache.Initialize (227ms)
 					TypeCache.ScanAssembly (223ms)
 				ResolveRequiredComponents (2ms)
 		FinalizeReload (0ms)
 			ReleaseScriptCaches (0ms)
 			RebuildScriptCaches (0ms)
-			SetupLoadedEditorAssemblies (579ms)
+			SetupLoadedEditorAssemblies (575ms)
 				LogAssemblyErrors (0ms)
-				InitializePlatformSupportModulesInManaged (10ms)
+				InitializePlatformSupportModulesInManaged (9ms)
 				SetLoadedEditorAssemblies (6ms)
 				RefreshPlugins (0ms)
 				BeforeProcessingInitializeOnLoad (71ms)
 				ProcessInitializeOnLoadAttributes (374ms)
-				ProcessInitializeOnLoadMethodAttributes (116ms)
+				ProcessInitializeOnLoadMethodAttributes (111ms)
 				AfterProcessingInitializeOnLoad (3ms)
 				EditorAssembliesLoaded (0ms)
 			ExecutionOrderSort2 (0ms)
 			AwakeInstancesAfterBackupRestoration (6ms)
-Refreshing native plugins compatible for Editor in 3.49 ms, found 3 plugins.
+Refreshing native plugins compatible for Editor in 3.55 ms, found 3 plugins.
 Preloading 0 native plugins for Editor in 0.00 ms.
 Unloading 4071 Unused Serialized files (Serialized files now loaded: 0)
 Unloading 40 unused Assets / (51.5 KB). Loaded Objects now: 4539.
 Memory consumption went from 0.61 GB to 0.61 GB.
-Total: 4.250200 ms (FindLiveObjects: 0.295200 ms CreateObjectMapping: 0.400600 ms MarkObjects: 3.513000 ms  DeleteObjects: 0.040700 ms)
+Total: 4.489000 ms (FindLiveObjects: 0.397200 ms CreateObjectMapping: 0.363700 ms MarkObjects: 3.687500 ms  DeleteObjects: 0.039800 ms)
 
 AssetImportParameters requested are different than current active one (requested -> active):
   custom:DOTSType/UnityEditor.Snap.SnapSettingsWindow: 5fb792d44d0bbc465fb792d44d0bbc46 -> 

@@ -23,6 +23,7 @@ namespace ECSAtmos.Systems
 
 	        AtmosEntityArchetype = EntityManager.CreateArchetype(
 	            typeof(AtmosUpdateDataComponent),
+	            typeof(AtmosTileOffsetShared),
 
                 //Data node stuff
                 typeof(MetaDataTileComponent),
@@ -57,6 +58,7 @@ namespace ECSAtmos.Systems
 
             AtmosPipeEntityArchetype = EntityManager.CreateArchetype(
 	            typeof(AtmosUpdateDataComponent),
+	            typeof(AtmosTileOffsetShared),
 
 	            //Data node stuff
 	            typeof(NeighbourBuffer),
@@ -116,7 +118,7 @@ namespace ECSAtmos.Systems
         public Entity CreatePipeEntity(int x, int y)
         {
 	        //Create pipe entity
-	        var pipeEntity = EntityManager.CreateEntity(World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<ArchetypeSystem>().AtmosPipeEntityArchetype);
+	        var pipeEntity = EntityManager.CreateEntity(AtmosPipeEntityArchetype);
 
 	        EntityManager.SetComponentData(pipeEntity, new AtmosUpdateDataComponent
 	        {

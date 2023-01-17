@@ -33,12 +33,12 @@ public class TestingMono : MonoBehaviour
     {
         if(World.DefaultGameObjectInjectionWorld?.EntityManager == null) return;
 
-        var entities = World.DefaultGameObjectInjectionWorld.EntityManager.GetAllEntities(Allocator.Temp);
+        var entities = World.DefaultGameObjectInjectionWorld.EntityManager.GetAllEntities();
 
         foreach (var entity in entities)
         {
             if(entity.TryGetComponent<GasMixComponent>(out var gas) == false) continue;
-            if(entity.TryGetComponent<Translation>(out var trans) == false) continue;
+            if(entity.TryGetComponent<WorldTransform>(out var world) == false) continue;
             var buffer = World.DefaultGameObjectInjectionWorld?.EntityManager.GetBuffer<GasDataBuffer>(entity);
 
             //All start with some gas
@@ -59,7 +59,7 @@ public class TestingMono : MonoBehaviour
         foreach (var entity in entities)
         {
             if(entity.TryGetComponent<GasMixComponent>(out var gas) == false) continue;
-            if(entity.TryGetComponent<Translation>(out var trans) == false) continue;
+            if(entity.TryGetComponent<WorldTransform>(out var world) == false) continue;
             var buffer = World.DefaultGameObjectInjectionWorld?.EntityManager.GetBuffer<GasDataBuffer>(entity);
 
             //All start with some gas

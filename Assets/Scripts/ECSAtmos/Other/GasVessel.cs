@@ -95,21 +95,21 @@ namespace Systems.ECSAtmos.Other
 
 		public void CreateStorage()
 		{
-			archetypeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<ArchetypeSystem>();
+			archetypeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<ArchetypeSystem>();
 			em = World.DefaultGameObjectInjectionWorld.EntityManager;
 			ContainerEntity = archetypeSystem.CreateStorageEntity();
 		}
 
 		public void CreateAtmosTile(Entity atmosTileEntity)
 		{
-			archetypeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<ArchetypeSystem>();
+			archetypeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<ArchetypeSystem>();
 			em = World.DefaultGameObjectInjectionWorld.EntityManager;
 			ContainerEntity = atmosTileEntity;
 		}
 
 		public void CreatePipe(int x, int y)
 		{
-			archetypeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<ArchetypeSystem>();
+			archetypeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<ArchetypeSystem>();
 			em = World.DefaultGameObjectInjectionWorld.EntityManager;
 			ContainerEntity = archetypeSystem.CreatePipeEntity(x, y);
 		}
@@ -357,7 +357,7 @@ namespace Systems.ECSAtmos.Other
 	        var isSleep = em.HasComponent<DeactivatedTag>(ContainerEntity);
 	        if(isSleep == false) return;
 
-	        var cmb = World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<AtmosBeginningEntityCommandBufferSystem>()
+	        var cmb = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<AtmosBeginningEntityCommandBufferSystem>()
 		        .CreateCommandBuffer();
 
 	        cmb.RemoveComponent<DeactivatedTag>(ContainerEntity);

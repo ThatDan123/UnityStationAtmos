@@ -1,11 +1,8 @@
 ﻿using ECSAtmos.Components;
-using ECSAtmos.Util;
 using Systems.ECSAtmos;
-using Systems.ECSAtmos.Util;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Jobs;
 using Unity.Mathematics;
 
 namespace ECSAtmos.Systems
@@ -13,131 +10,109 @@ namespace ECSAtmos.Systems
 	[BurstCompile]
 	[UpdateInGroup(typeof(AtmosSystemGroup))]
 	[UpdateAfter(typeof(TileConductivitySystem))]
-	public partial class PipeGasExchangeSystem : AtmosSystemBase
+	public partial struct PipeGasExchangeSystem : ISystem
 	{
 		private EntityQuery query;
-
-        private AtmosEndEntityCommandBufferSystem commandBufferSystem;
-
-        protected override void OnCreate()
+		
+        [BurstCompile]
+        public void OnCreate(ref SystemState state)
         {
-	        commandBufferSystem = World.GetOrCreateSystem<AtmosEndEntityCommandBufferSystem>();
-
-	        var queryDesc = new EntityQueryDesc
-	        {
-		        All = new ComponentType[]
-		        {
-			        typeof(AtmosUpdateDataComponent),
-			        typeof(GasMixComponent),
-			        typeof(NeighbourBuffer),
-			        typeof(GasDataBuffer),
-			        typeof(PipeAtmosTag)
-		        },
-
-		        None = new ComponentType[]
-		        {
-			        typeof(DeactivatedTag)
-		        }
-	        };
-
-	        query = GetEntityQuery(queryDesc);
-        }
-
-        protected override JobHandle Update(JobHandle inputDeps, OffsetLogic offset)
-        {
-	        PipeGasExchangeJob job = new PipeGasExchangeJob
-	        {
-		        pipeNeighborsHandle = GetBufferTypeHandle<NeighbourBuffer>(true),
-
-		        entityTypeHandle = GetEntityTypeHandle(),
-
-		        offset = offset,
-
-		        allGasMix = GetComponentDataFromEntity<GasMixComponent>(),
-		        allUpdateData = GetComponentDataFromEntity<AtmosUpdateDataComponent>(),
-		        allGasData = GetBufferFromEntity<GasDataBuffer>(),
-		        ecb = commandBufferSystem.CreateCommandBuffer().AsParallelWriter()
-	        };
-
-	        inputDeps = job.ScheduleParallel(query, inputDeps);
-
-	        commandBufferSystem.AddJobHandleForProducer(inputDeps);
-
-	        return inputDeps;
+	        query = SystemAPI.QueryBuilder()
+		        .WithAll<AtmosUpdateDataComponent, AtmosTileOffsetShared, GasMixComponent, NeighbourBuffer, 
+			        GasDataBuffer, PipeAtmosTag>()
+		        .WithNone<DeactivatedTag>().Build();
+			
+	        state.RequireForUpdate(query);
+			
+	        //This is fine and won't block the system running as it is Added after the RequireForUpdate
+	        query.AddSharedComponentFilter(new AtmosTileOffsetShared());
+			
+	        state.RequireForUpdate<AtmosOffsetSingleton>();
         }
 
         [BurstCompile]
-        private struct PipeGasExchangeJob : IJobEntityBatch
+        public void OnDestroy(ref SystemState state) { }
+
+        [BurstCompile]
+        public void OnUpdate(ref SystemState state)
+        {
+	        state.EntityManager.CompleteDependencyBeforeRO<AtmosOffsetSingleton>();
+	        var offsetSingleton = SystemAPI.GetSingleton<AtmosOffsetSingleton>();
+	        
+	        //This basically means that every forth tile is allowed to do an update
+	        //But we alternate which ones every step (I would draw a shitty paint diagram to explain but i cant draw)
+	        //Basically means every forth update every tile will have done an update
+	        //NOTE: because of this we don't update two tiles in the same frame therefore can disable writing safeties in the job
+	        query.SetSharedComponentFilter(new AtmosTileOffsetShared(offsetSingleton.Offset));
+
+	        var ecbSystem = SystemAPI.GetSingleton<AtmosEndEntityCommandBufferSystem.Singleton>();
+	        var ecb = ecbSystem.CreateCommandBuffer(state.WorldUnmanaged);
+			
+	        var job = new PipeGasExchangeJob
+	        {
+		        PipeNeighbors = SystemAPI.GetBufferLookup<NeighbourBuffer>(true),
+
+		        AllGasMix = SystemAPI.GetComponentLookup<GasMixComponent>(),
+		        AllUpdateData = SystemAPI.GetComponentLookup<AtmosUpdateDataComponent>(),
+		        AllGasData = SystemAPI.GetBufferLookup<GasDataBuffer>(),
+		        Ecb = ecb.AsParallelWriter()
+	        }.ScheduleParallel(query, state.Dependency);
+
+	        state.Dependency = job;
+        }
+
+        [BurstCompile]
+        private partial struct PipeGasExchangeJob : IJobEntity
         {
 	        [ReadOnly]
-	        public BufferTypeHandle<NeighbourBuffer> pipeNeighborsHandle;
-
-	        [ReadOnly]
-	        public EntityTypeHandle entityTypeHandle;
-
-	        [ReadOnly]
-	        public OffsetLogic offset;
+	        public BufferLookup<NeighbourBuffer> PipeNeighbors;
 
 	        //Writing and Reading from these, this is thread safe as tiles are only access once in an area so no conflicts
 	        [NativeDisableParallelForRestriction]
-	        public ComponentDataFromEntity<GasMixComponent> allGasMix;
+	        public ComponentLookup<GasMixComponent> AllGasMix;
 
 	        [NativeDisableParallelForRestriction]
-	        public BufferFromEntity<GasDataBuffer> allGasData;
+	        public BufferLookup<GasDataBuffer> AllGasData;
 
 	        [NativeDisableParallelForRestriction]
-	        public ComponentDataFromEntity<AtmosUpdateDataComponent> allUpdateData;
+	        public ComponentLookup<AtmosUpdateDataComponent> AllUpdateData;
+	        
+	        public EntityCommandBuffer.ParallelWriter Ecb;
 
-	        [NativeDisableParallelForRestriction]
-	        public EntityCommandBuffer.ParallelWriter ecb;
-
-	        public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
+	        private void Execute([ChunkIndexInQuery] int index, in Entity entity)
 	        {
-		        BufferAccessor<NeighbourBuffer> pipeNeighbors = batchInChunk.GetBufferAccessor(this.pipeNeighborsHandle);
+		        var currentUpdateData = AllUpdateData[entity];
 
-		        for (int i = 0; i < batchInChunk.Count; ++i)
+		        currentUpdateData.TriedToUpdate = true;
+		        AllUpdateData[entity] = currentUpdateData;
+
+		        var neighbors = PipeNeighbors[entity];
+
+		        //No neighbors so don't bother
+		        if(neighbors.Length == 0) return;
+
+		        var currentGasMix = AllGasMix[entity];
+		        var currentGasDataBuffer = AllGasData[entity];
+
+		        var isPressureChanged = PressureCheck(in neighbors, ref AllGasMix, ref AllGasData, ref currentGasMix,
+			        ref currentGasDataBuffer);
+
+		        if (isPressureChanged == false)
 		        {
-			        var entity = batchInChunk.GetNativeArray(entityTypeHandle)[i];
-
-			        var currentUpdateData = allUpdateData[entity];
-
-			        //This basically means that every forth pipe is allowed to do an update
-			        //But we alternate which ones every step (I would draw a shitty paint diagram to explain but i cant draw)
-			        //Basically means every forth update every pipe will have done an update
-			        //NOTE: because of this we don't update two pipe in the same frame therefore can disable writing safeties in the job
-			        if (currentUpdateData.XUpdateID != offset.XUpdateID || currentUpdateData.YUpdateID != offset.YUpdateID) continue;
-
-			        currentUpdateData.TriedToUpdate = true;
-			        allUpdateData[entity] = currentUpdateData;
-
-			        var neighbors = pipeNeighbors[i];
-
-			        //No neighbors so don't bother
-			        if(neighbors.Length == 0) continue;
-
-			        var currentGasMix = allGasMix[entity];
-			        var currentGasDataBuffer = allGasData[entity];
-
-			        var isPressureChanged = PressureCheck(in neighbors, ref allGasMix, ref allGasData, ref currentGasMix,
-				        ref currentGasDataBuffer);
-
-			        if (isPressureChanged == false)
-					{
-						//If no pressure change is required as all neighbors are equal sleep pipe
-						ecb.AddComponent<DeactivatedTag>(batchIndex, entity);
-						continue;
-					}
-
-					//Now to equalise the gases
-					Equalise(in neighbors, ref allGasMix, ref allUpdateData, ref allGasData,
-						ref currentGasMix, ref currentGasDataBuffer, ref entity, ref currentUpdateData, ref ecb, in batchIndex);
+			        //If no pressure change is required as all neighbors are equal sleep pipe
+			        Ecb.AddComponent<DeactivatedTag>(index, entity);
+			        return;
 		        }
+
+		        //Now to equalise the gases
+		        Equalise(in neighbors, ref AllGasMix, ref AllUpdateData, ref AllGasData,
+			        ref currentGasMix, ref currentGasDataBuffer, in entity, ref currentUpdateData, ref Ecb, in index);
 	        }
 
 	        private static bool PressureCheck(
 		        in DynamicBuffer<NeighbourBuffer> neighbors,
-		        ref ComponentDataFromEntity<GasMixComponent> allGasMix,
-		        ref BufferFromEntity<GasDataBuffer> allGasData,
+		        ref ComponentLookup<GasMixComponent> allGasMix,
+		        ref BufferLookup<GasDataBuffer> allGasData,
 		        ref GasMixComponent currentGasMix,
 		        ref DynamicBuffer<GasDataBuffer> currentGasDataBuffer)
 	        {
@@ -193,12 +168,12 @@ namespace ECSAtmos.Systems
 
 	        private static void Equalise(
 		        in DynamicBuffer<NeighbourBuffer> neighbors,
-		        ref ComponentDataFromEntity<GasMixComponent> allGasMix,
-		        ref ComponentDataFromEntity<AtmosUpdateDataComponent> allUpdateData,
-		        ref BufferFromEntity<GasDataBuffer> allGasData,
+		        ref ComponentLookup<GasMixComponent> allGasMix,
+		        ref ComponentLookup<AtmosUpdateDataComponent> allUpdateData,
+		        ref BufferLookup<GasDataBuffer> allGasData,
 		        ref GasMixComponent currentGasMix,
 		        ref DynamicBuffer<GasDataBuffer> currentGasDataBuffer,
-		        ref Entity entity,
+		        in Entity entity,
 		        ref AtmosUpdateDataComponent currentUpdateData,
 		        ref EntityCommandBuffer.ParallelWriter ecb,
 		        in int batchIndex)

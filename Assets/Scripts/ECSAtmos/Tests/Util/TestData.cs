@@ -222,7 +222,7 @@ namespace Unity.Entities.Tests
         }
     }
 
-    public struct EcsState1 : ISystemStateComponentData
+    public struct EcsState1 : ICleanupComponentData
     {
         public int Value;
 
@@ -230,10 +230,6 @@ namespace Unity.Entities.Tests
         {
             Value = value;
         }
-    }
-
-    public struct EcsStateTag1 : ISystemStateComponentData
-    {
     }
 
     [InternalBufferCapacity(8)]
@@ -277,7 +273,7 @@ namespace Unity.Entities.Tests
     }
 
     [InternalBufferCapacity(8)]
-    public struct EcsIntStateElement : ISystemStateBufferElementData
+    public struct EcsIntStateElement : ICleanupBufferElementData
     {
         public static implicit operator int(EcsIntStateElement e)
         {
@@ -300,10 +296,6 @@ namespace Unity.Entities.Tests
     }
 
     public struct EcsTestTag : IComponentData
-    {
-    }
-
-    public struct EcsTestSharedTag : ISharedComponentData
     {
     }
 

@@ -1,82 +1,58 @@
 ﻿using ECSAtmos.Components;
 using ECSAtmos.Util;
-using Systems.ECSAtmos.Util;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Jobs;
 
 namespace ECSAtmos.Systems
 {
 	[BurstCompile]
 	[UpdateInGroup(typeof(AtmosSystemGroup))]
-	[UpdateAfter(typeof(AtmosBeginningEntityCommandBufferSystem))]
-	public partial class UpdateResetSystem : AtmosSystemBase
+	[UpdateAfter(typeof(AtmosOffsetSystem))]
+	public partial struct UpdateResetSystem : ISystem
 	{
-		private EntityQuery query;
-
-		protected override void OnCreate()
+		[BurstCompile]
+		public void OnCreate(ref SystemState state)
 		{
-			var queryDesc = new EntityQueryDesc
-			{
-				All = new ComponentType[]
-				{
-					typeof(AtmosUpdateDataComponent)
-				},
-
-				None = new ComponentType[]
-				{
-					typeof(DeactivatedTag)
-				}
-			};
-
-			query = GetEntityQuery(queryDesc);
-		}
-
-		protected override JobHandle Update(JobHandle inputDeps, OffsetLogic offset)
-		{
-			UpdateResetJob job = new UpdateResetJob
-			{
-				offset = offset,
-
-				entityTypeHandle = GetEntityTypeHandle(),
-
-				allUpdateData = GetComponentDataFromEntity<AtmosUpdateDataComponent>()
-			};
-
-			return job.ScheduleParallel(query, inputDeps);
+			state.RequireForUpdate(SystemAPI.QueryBuilder().WithAll<AtmosUpdateDataComponent>().WithNone<DeactivatedTag>().Build());
+			
+			state.RequireForUpdate<AtmosOffsetSingleton>();
 		}
 
 		[BurstCompile]
-		private struct UpdateResetJob : IJobEntityBatch
+		public void OnDestroy(ref SystemState state) { }
+
+		[BurstCompile]
+		public void OnUpdate(ref SystemState state)
+		{
+			state.EntityManager.CompleteDependencyBeforeRO<AtmosOffsetSingleton>();
+			var offsetSingleton = SystemAPI.GetSingleton<AtmosOffsetSingleton>();
+			
+			var job = new UpdateResetJob
+			{
+				offset = offsetSingleton.Offset
+			}.ScheduleParallel(state.Dependency);
+
+			state.Dependency = job;
+		}
+
+		[BurstCompile]
+		[WithNone(typeof(DeactivatedTag))]
+		[WithAll(typeof(AtmosUpdateDataComponent))]
+		private partial struct UpdateResetJob : IJobEntity
 		{
 			[ReadOnly]
 			public OffsetLogic offset;
 
-			[ReadOnly]
-			public EntityTypeHandle entityTypeHandle;
-
-			[NativeDisableParallelForRestriction]
-			public ComponentDataFromEntity<AtmosUpdateDataComponent> allUpdateData;
-
-			public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
+			private void Execute(ref AtmosUpdateDataComponent atmosUpdateDataComponent)
 			{
-				for (int i = 0; i < batchInChunk.Count; ++i)
+				if (atmosUpdateDataComponent.XUpdateID == offset.XUpdateID &&
+				    atmosUpdateDataComponent.YUpdateID == offset.YUpdateID)
 				{
-					var entity = batchInChunk.GetNativeArray(entityTypeHandle)[i];
-
-					var currentUpdateData = allUpdateData[entity];
-
-					if (currentUpdateData.XUpdateID == offset.XUpdateID &&
-					    currentUpdateData.YUpdateID == offset.YUpdateID)
-					{
-						currentUpdateData.Updated = false;
-					}
-
-					currentUpdateData.TriedToUpdate = false;
-
-					allUpdateData[entity] = currentUpdateData;
+					atmosUpdateDataComponent.Updated = false;
 				}
+
+				atmosUpdateDataComponent.TriedToUpdate = false;
 			}
 		}
 	}

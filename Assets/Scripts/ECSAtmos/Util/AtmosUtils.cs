@@ -405,7 +405,7 @@ namespace Systems.ECSAtmos
 			return (double) math.abs(value - thisValue) < (double) math.max(1E-06f * math.max(math.abs(thisValue), math.abs(value)), math.EPSILON * 8f);
 		}
 
-		public static bool TryGetComponent<T>(this Entity entity, out T componentData) where T : struct, IComponentData
+		public static bool TryGetComponent<T>(this Entity entity, out T componentData) where T : unmanaged, IComponentData
 		{
 			if (World.DefaultGameObjectInjectionWorld.EntityManager.HasComponent<T>(entity) == false)
 			{
@@ -413,7 +413,7 @@ namespace Systems.ECSAtmos
 				return false;
 			}
 
-			componentData = World.DefaultGameObjectInjectionWorld.EntityManager.GetComponentData<T>(entity);;
+			componentData = World.DefaultGameObjectInjectionWorld.EntityManager.GetComponentData<T>(entity);
 			return true;
 		}
 
@@ -500,7 +500,7 @@ namespace Systems.ECSAtmos
 			// use the persistent allocator
 			var result = builder.CreateBlobAssetReference<GasInfo>(Allocator.Persistent);
 
-			var archetypeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystem<ArchetypeSystem>();
+			var archetypeSystem = World.DefaultGameObjectInjectionWorld.GetOrCreateSystemManaged<ArchetypeSystem>();
 			archetypeSystem.GasReferences.Add(newIndex, result);
 
 			builder.Dispose();

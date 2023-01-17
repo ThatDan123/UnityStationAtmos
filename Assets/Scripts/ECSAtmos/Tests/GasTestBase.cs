@@ -27,7 +27,7 @@ namespace ECSAtmos.Tests
 		{
 			base.Setup();
 
-			archetypeSystem = World.GetOrCreateSystem<ArchetypeSystem>();
+			archetypeSystem = World.GetOrCreateSystemManaged<ArchetypeSystem>();
 
 			archetypeSystem.GasReferences.Clear();
 

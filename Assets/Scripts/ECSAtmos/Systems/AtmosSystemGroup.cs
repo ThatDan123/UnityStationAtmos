@@ -3,7 +3,7 @@
 namespace ECSAtmos.Systems
 {
 	[UpdateInGroup(typeof(SimulationSystemGroup))]
-	public class AtmosSystemGroup : ComponentSystemGroup
+	public partial class AtmosSystemGroup : ComponentSystemGroup
 	{
 		public float TickRate { get; set; }
 
@@ -13,6 +13,7 @@ namespace ECSAtmos.Systems
 
 		// AtmosSystemGroup Order:
 		// AtmosBeginningEntityCommandBufferSystem
+		// OffsetSystem
 		// UpdateResetSystem
 		// ConductivitySystem
 		// TileConductivitySystem
@@ -26,7 +27,7 @@ namespace ECSAtmos.Systems
 		{
 			if (Active == false) return;
 
-			timer += Time.DeltaTime;
+			timer += SystemAPI.Time.DeltaTime;
 
 			if (timer < TickRate) return;
 			timer = 0;

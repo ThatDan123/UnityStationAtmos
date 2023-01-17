@@ -1,107 +1,70 @@
 ﻿using ECSAtmos.Components;
-using ECSAtmos.Util;
-using Systems.ECSAtmos.Util;
 using Unity.Burst;
-using Unity.Collections;
 using Unity.Entities;
-using Unity.Jobs;
 
 namespace ECSAtmos.Systems
 {
 	[BurstCompile]
 	[UpdateInGroup(typeof(AtmosSystemGroup))]
 	[UpdateAfter(typeof(TileGasExchangeSystem))]
-	public class DeactivateSystem : AtmosSystemBase
+	public partial struct DeactivateSystem : ISystem
 	{
 		private EntityQuery query;
-
-		private AtmosEndEntityCommandBufferSystem commandBufferSystem;
-
-		protected override void OnCreate()
+		
+		[BurstCompile]
+		public void OnCreate(ref SystemState state)
 		{
-			commandBufferSystem = World.GetOrCreateSystem<AtmosEndEntityCommandBufferSystem>();
-
-			var queryDesc = new EntityQueryDesc
-			{
-				All = new ComponentType[]
-				{
-					typeof(AtmosUpdateDataComponent),
-					typeof(ConductivityComponent)
-				},
-
-				None = new ComponentType[]
-				{
-					typeof(DeactivatedTag)
-				}
-			};
-
-			query = GetEntityQuery(queryDesc);
-		}
-
-		protected override JobHandle Update(JobHandle inputDeps, OffsetLogic offset)
-		{
-			DeactivateJob job = new DeactivateJob
-			{
-				entityTypeHandle = GetEntityTypeHandle(),
-
-				offset = offset,
-
-				allUpdateData = GetComponentDataFromEntity<AtmosUpdateDataComponent>(true),
-				allConductivity = GetComponentDataFromEntity<ConductivityComponent>(true),
-				ecb = commandBufferSystem.CreateCommandBuffer().AsParallelWriter()
-			};
-
-			inputDeps = job.ScheduleParallel(query, inputDeps);
-
-			commandBufferSystem.AddJobHandleForProducer(inputDeps);
-
-			return inputDeps;
+			query = SystemAPI.QueryBuilder().WithAll<AtmosUpdateDataComponent, ConductivityComponent, AtmosTileOffsetShared>().WithNone<DeactivatedTag>().Build();
+			
+			state.RequireForUpdate(query);
+			
+			//This is fine and won't block the system running as it is Added after the RequireForUpdate
+			query.AddSharedComponentFilter(new AtmosTileOffsetShared());
+			
+			state.RequireForUpdate<AtmosOffsetSingleton>();
 		}
 
 		[BurstCompile]
-		private struct DeactivateJob : IJobEntityBatch
+		public void OnDestroy(ref SystemState state) { }
+
+		[BurstCompile]
+		public void OnUpdate(ref SystemState state)
 		{
-			[ReadOnly]
-			public EntityTypeHandle entityTypeHandle;
+			state.EntityManager.CompleteDependencyBeforeRO<AtmosOffsetSingleton>();
+			var offsetSingleton = SystemAPI.GetSingleton<AtmosOffsetSingleton>();
+	        
+			//This basically means that every forth tile is allowed to do an update
+			//But we alternate which ones every step (I would draw a shitty paint diagram to explain but i cant draw)
+			//Basically means every forth update every tile will have done an update
+			//NOTE: because of this we don't update two tiles in the same frame therefore can disable writing safeties in the job
+			query.SetSharedComponentFilter(new AtmosTileOffsetShared(offsetSingleton.Offset));
 
-			[ReadOnly]
-			public OffsetLogic offset;
-
-			[ReadOnly]
-			[NativeDisableParallelForRestriction]
-			public ComponentDataFromEntity<AtmosUpdateDataComponent> allUpdateData;
-
-			[ReadOnly]
-			[NativeDisableParallelForRestriction]
-			public ComponentDataFromEntity<ConductivityComponent> allConductivity;
-
-			[NativeDisableParallelForRestriction]
-			public EntityCommandBuffer.ParallelWriter ecb;
-
-			public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
+			var ecbSystem = SystemAPI.GetSingleton<AtmosEndEntityCommandBufferSystem.Singleton>();
+			var ecb = ecbSystem.CreateCommandBuffer(state.WorldUnmanaged);
+			
+			var job = new DeactivateJob
 			{
-				for (int i = 0; i < batchInChunk.Count; ++i)
-				{
-					var entity = batchInChunk.GetNativeArray(entityTypeHandle)[i];
+				Ecb = ecb.AsParallelWriter()
+			}.ScheduleParallel(query, state.Dependency);
 
-					var currentUpdateData = allUpdateData[entity];
+			state.Dependency = job;
+		}
 
-					//This basically means that every forth tile is allowed to do an update
-					//But we alternate which ones every step (I would draw a shitty paint diagram to explain but i cant draw)
-					//Basically means every forth update every tile will have done an update
-					//NOTE: because of this we don't update two tiles in the same frame therefore can disable writing safeties in the job
-					if (currentUpdateData.XUpdateID != offset.XUpdateID || currentUpdateData.YUpdateID != offset.YUpdateID) continue;
+		[BurstCompile]
+		private partial struct DeactivateJob : IJobEntity
+		{
+			public EntityCommandBuffer.ParallelWriter Ecb;
 
-					var currentConductivity = allConductivity[entity];
+			private void Execute([ChunkIndexInQuery] int index, in Entity entity, 
+				in AtmosUpdateDataComponent atmosUpdateDataComponent, in ConductivityComponent conductivityComponent)
+			{
+				//If atmos tile updated then don't deactivate
+				if(atmosUpdateDataComponent.Updated) return;
 
-					//If atmos tile updated then don't deactivate
-					if(currentUpdateData.Updated) continue;
+				//If heat conducting then don't deactivate
+				if(conductivityComponent.StartingSuperConduct || conductivityComponent.AllowedToSuperConduct) return;
 
-					//If heat conducting then don't deactivate
-					if(currentConductivity.StartingSuperConduct || currentConductivity.AllowedToSuperConduct) continue;
-
-					ecb.AddComponent<DeactivatedTag>(batchIndex, entity);
-				}
+				Ecb.AddComponent<DeactivatedTag>(index, entity);
 			}
 		}
 	}

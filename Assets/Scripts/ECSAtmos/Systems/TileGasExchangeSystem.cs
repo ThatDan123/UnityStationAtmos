@@ -1,12 +1,9 @@
 using ECSAtmos.Components;
-using ECSAtmos.Util;
 using Systems.Atmospherics;
 using Systems.ECSAtmos;
-using Systems.ECSAtmos.Util;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Jobs;
 using Unity.Mathematics;
 
 namespace ECSAtmos.Systems
@@ -14,178 +11,156 @@ namespace ECSAtmos.Systems
 	[BurstCompile]
 	[UpdateInGroup(typeof(AtmosSystemGroup))]
     [UpdateAfter(typeof(PipeGasExchangeSystem))]
-    public partial class TileGasExchangeSystem : AtmosSystemBase
+    public partial struct TileGasExchangeSystem : ISystem
     {
 	    private EntityQuery query;
-
-        private AtmosEndEntityCommandBufferSystem commandBufferSystem;
-
-        protected override void OnCreate()
+	    
+	    [BurstCompile]
+        public void OnCreate(ref SystemState state)
         {
-	        commandBufferSystem = World.GetOrCreateSystem<AtmosEndEntityCommandBufferSystem>();
-
-	        var queryDesc = new EntityQueryDesc
-	        {
-				All = new ComponentType[]
-				{
-					typeof(AtmosUpdateDataComponent),
-					typeof(MetaDataTileComponent),
-					typeof(NeighbourBuffer),
-					typeof(GasMixComponent),
-					typeof(GasDataBuffer),
-					typeof(TileAtmosTag)
-				},
-
-				None = new ComponentType[]
-				{
-					typeof(DeactivatedTag)
-				}
-	        };
-
-	        query = GetEntityQuery(queryDesc);
-        }
-
-        protected override JobHandle Update(JobHandle inputDeps, OffsetLogic offset)
-        {
-	        TileGasExchangeJob job = new TileGasExchangeJob
-	        {
-		        metaDataTileNeighbor = GetBufferTypeHandle<NeighbourBuffer>(true),
-
-		        entityTypeHandle = GetEntityTypeHandle(),
-
-		        offset = offset,
-
-		        allGasMix = GetComponentDataFromEntity<GasMixComponent>(),
-
-		        allMetaDataTile = GetComponentDataFromEntity<MetaDataTileComponent>(true),
-
-		        allGasData = GetBufferFromEntity<GasDataBuffer>(),
-		        allUpdateData = GetComponentDataFromEntity<AtmosUpdateDataComponent>(),
-		        ecb = commandBufferSystem.CreateCommandBuffer().AsParallelWriter()
-	        };
-
-	        inputDeps = job.ScheduleParallel(query, inputDeps);
-
-	        commandBufferSystem.AddJobHandleForProducer(inputDeps);
-
-	        return inputDeps;
+	        query = SystemAPI.QueryBuilder()
+		        .WithAll<AtmosUpdateDataComponent, AtmosTileOffsetShared, MetaDataTileComponent, NeighbourBuffer, 
+			        GasMixComponent, GasDataBuffer, TileAtmosTag>()
+		        .WithNone<DeactivatedTag>().Build();
+	        
+	        state.RequireForUpdate(query);
+	        
+	        //This is fine and won't block the system running as it is Added after the RequireForUpdate
+	        query.AddSharedComponentFilter(new AtmosTileOffsetShared());
+	        
+	        state.RequireForUpdate<AtmosOffsetSingleton>();
         }
 
         [BurstCompile]
-        private struct TileGasExchangeJob : IJobEntityBatch
+        public void OnDestroy(ref SystemState state) { }
+
+        [BurstCompile]
+        public void OnUpdate(ref SystemState state)
+        {
+	        state.EntityManager.CompleteDependencyBeforeRO<AtmosOffsetSingleton>();
+	        var offsetSingleton = SystemAPI.GetSingleton<AtmosOffsetSingleton>();
+	        
+	        //This basically means that every forth tile is allowed to do an update
+	        //But we alternate which ones every step (I would draw a shitty paint diagram to explain but i cant draw)
+	        //Basically means every forth update every tile will have done an update
+	        //NOTE: because of this we don't update two tiles in the same frame therefore can disable writing safeties in the job
+	        query.SetSharedComponentFilter(new AtmosTileOffsetShared(offsetSingleton.Offset));
+
+	        var ecbSystem = SystemAPI.GetSingleton<AtmosEndEntityCommandBufferSystem.Singleton>();
+	        var ecb = ecbSystem.CreateCommandBuffer(state.WorldUnmanaged);
+	        
+	        var jobHandle = new TileGasExchangeJob
+	        {
+		        MetaDataTileNeighbor = SystemAPI.GetBufferLookup<NeighbourBuffer>(true),
+		        
+		        AllGasMix = SystemAPI.GetComponentLookup<GasMixComponent>(),
+
+		        AllMetaDataTile = SystemAPI.GetComponentLookup<MetaDataTileComponent>(true),
+
+		        AllGasData = SystemAPI.GetBufferLookup<GasDataBuffer>(),
+		        AllUpdateData = SystemAPI.GetComponentLookup<AtmosUpdateDataComponent>(),
+		        
+		        Ecb = ecb.AsParallelWriter()
+	        }.ScheduleParallel(query, state.Dependency);
+
+	        state.Dependency = jobHandle;
+        }
+
+        [BurstCompile]
+        private partial struct TileGasExchangeJob : IJobEntity
         {
 	        [ReadOnly]
-	        public BufferTypeHandle<NeighbourBuffer> metaDataTileNeighbor;
-
-	        [ReadOnly]
-	        public EntityTypeHandle entityTypeHandle;
-
-	        [ReadOnly]
-	        public OffsetLogic offset;
+	        public BufferLookup<NeighbourBuffer> MetaDataTileNeighbor;
 
 	        //Writing and Reading from these, this is thread safe as tiles are only access once in an area so no conflicts
 	        [NativeDisableParallelForRestriction]
-	        public ComponentDataFromEntity<GasMixComponent> allGasMix;
+	        public ComponentLookup<GasMixComponent> AllGasMix;
 
 	        [NativeDisableParallelForRestriction]
-	        public BufferFromEntity<GasDataBuffer> allGasData;
+	        public BufferLookup<GasDataBuffer> AllGasData;
 
 	        [ReadOnly]
 	        [NativeDisableParallelForRestriction]
-	        public ComponentDataFromEntity<MetaDataTileComponent> allMetaDataTile;
+	        public ComponentLookup<MetaDataTileComponent> AllMetaDataTile;
 
 	        [NativeDisableParallelForRestriction]
-	        public ComponentDataFromEntity<AtmosUpdateDataComponent> allUpdateData;
+	        public ComponentLookup<AtmosUpdateDataComponent> AllUpdateData;
+	        
+	        public EntityCommandBuffer.ParallelWriter Ecb;
 
-	        [NativeDisableParallelForRestriction]
-	        public EntityCommandBuffer.ParallelWriter ecb;
-
-	        public void Execute(ArchetypeChunk batchInChunk, int batchIndex)
+	        private void Execute([ChunkIndexInQuery] int index, in Entity entity)
 	        {
-		        BufferAccessor<NeighbourBuffer> metaDataTileNeighbors = batchInChunk.GetBufferAccessor(this.metaDataTileNeighbor);
+				var currentUpdateData = AllUpdateData[entity];
 
-		        for (int i = 0; i < batchInChunk.Count; ++i)
+		        currentUpdateData.TriedToUpdate = true;
+
+		        AllUpdateData[entity] = currentUpdateData;
+
+		        var currentMetaDataTile = AllMetaDataTile[entity];
+
+		        //We only need to check open tiles
+		        if (currentMetaDataTile.IsIsolatedNode) return;
+
+		        //We only need to check non-solid tiles
+		        if (currentMetaDataTile.IsSolid) return;
+
+		        var neighbors = MetaDataTileNeighbor[entity];
+
+		        //No neighbors so don't bother
+		        if(neighbors.Length == 0) return;
+
+		        var neighborsEqualise = new NativeArray<bool>(neighbors.Length, Allocator.Temp);
+		        var boolShouldEqualise = false;
+
+		        for (int j = neighbors.Length - 1; j >= 0; j--)
 		        {
-			        var entity = batchInChunk.GetNativeArray(entityTypeHandle)[i];
+			        var neighbour = neighbors[j];
 
-			        var currentUpdateData = allUpdateData[entity];
+			        //TODO might need to check neighbour still exists?
+			        var neighbourMetaDataTile = AllMetaDataTile[neighbour.NeighbourEntity];
 
-			        //This basically means that every forth tile is allowed to do an update
-			        //But we alternate which ones every step (I would draw a shitty paint diagram to explain but i cant draw)
-			        //Basically means every forth update every tile will have done an update
-			        //NOTE: because of this we don't update two tiles in the same frame therefore can disable writing safeties in the job
-			        if (currentUpdateData.XUpdateID != offset.XUpdateID || currentUpdateData.YUpdateID != offset.YUpdateID) continue;
+			        //Bool means to block gas equalise, e.g for when closed windoor/directional passable
+			        //Have to do IsOccupiedBlocked from both tiles perspective
+			        var equalise = neighbourMetaDataTile.IsIsolatedNode == false &&
+			                       neighbourMetaDataTile.IsSolid == false &&
+			                       AtmosUtils.IsOccupiedBlocked(in currentMetaDataTile, in neighbourMetaDataTile) == false &&
+			                       AtmosUtils.IsOccupiedBlocked(in neighbourMetaDataTile, in currentMetaDataTile) == false;
 
-			        currentUpdateData.TriedToUpdate = true;
+			        neighborsEqualise[j] = equalise;
 
-			        allUpdateData[entity] = currentUpdateData;
+			        if(equalise == false) continue;
 
-			        var currentMetaDataTile = allMetaDataTile[entity];
-
-			        //We only need to check open tiles
-			        if (currentMetaDataTile.IsIsolatedNode) continue;
-
-			        //We only need to check non-solid tiles
-			        if (currentMetaDataTile.IsSolid) continue;
-
-			        var neighbors = metaDataTileNeighbors[i];
-
-			        //No neighbors so don't bother
-			        if(neighbors.Length == 0) continue;
-
-			        var neighborsEqualise = new NativeArray<bool>(neighbors.Length, Allocator.Temp);
-			        var boolShouldEqualise = false;
-
-			        for (int j = neighbors.Length - 1; j >= 0; j--)
-			        {
-				        var neighbour = neighbors[j];
-
-				        //TODO might need to check neighbour still exists?
-				        var neighbourMetaDataTile = allMetaDataTile[neighbour.NeighbourEntity];
-
-				        //Bool means to block gas equalise, e.g for when closed windoor/directional passable
-				        //Have to do IsOccupiedBlocked from both tiles perspective
-				        var equalise = neighbourMetaDataTile.IsIsolatedNode == false &&
-				                       neighbourMetaDataTile.IsSolid == false &&
-				                       AtmosUtils.IsOccupiedBlocked(in currentMetaDataTile, in neighbourMetaDataTile) == false &&
-				                       AtmosUtils.IsOccupiedBlocked(in neighbourMetaDataTile, in currentMetaDataTile) == false;
-
-				        neighborsEqualise[j] = equalise;
-
-				        if(equalise == false) continue;
-
-				        boolShouldEqualise = true;
-			        }
-
-			        //No neighbors to equalise to so don't bother
-			        if(boolShouldEqualise == false) continue;
-
-			        var currentGasMix = allGasMix[entity];
-			        var currentGasDataBuffer = allGasData[entity];
-
-			        //TODO out the wind stuff
-			        var isPressureChanged = PressureCheck(in neighbors, in neighborsEqualise, ref allGasMix,
-				        in allMetaDataTile, ref allGasData,
-				        ref currentGasMix, ref currentGasDataBuffer, in currentMetaDataTile.TileLocalPos);
-
-					if (isPressureChanged == false)
-					{
-						//TODO queue wind event, use ECB?
-						continue;
-					}
-
-					//Now to equalise the gases
-					Equalise(in neighbors, in neighborsEqualise, ref allGasMix, ref allUpdateData, in allMetaDataTile, ref allGasData,
-						ref currentGasMix, ref currentGasDataBuffer, in entity, in currentMetaDataTile, ref currentUpdateData, ref ecb, in batchIndex);
+			        boolShouldEqualise = true;
 		        }
+
+		        //No neighbors to equalise to so don't bother
+		        if(boolShouldEqualise == false) return;
+
+		        var currentGasMix = AllGasMix[entity];
+		        var currentGasDataBuffer = AllGasData[entity];
+
+		        //TODO out the wind stuff
+		        var isPressureChanged = PressureCheck(in neighbors, in neighborsEqualise, ref AllGasMix,
+			        in AllMetaDataTile, ref AllGasData,
+			        ref currentGasMix, ref currentGasDataBuffer, in currentMetaDataTile.TileLocalPos);
+
+				if (isPressureChanged == false)
+				{
+					//TODO queue wind event, use ECB?
+					return;
+				}
+
+				//Now to equalise the gases
+				Equalise(in neighbors, in neighborsEqualise, ref AllGasMix, ref AllUpdateData, in AllMetaDataTile, ref AllGasData,
+					ref currentGasMix, ref currentGasDataBuffer, in entity, in currentMetaDataTile, ref currentUpdateData, ref Ecb, in index);
 	        }
 
 	        private static bool PressureCheck(
 		        in DynamicBuffer<NeighbourBuffer> neighbors,
 		        in NativeArray<bool> neighborsEqualise,
-		        ref ComponentDataFromEntity<GasMixComponent> allGasMix,
-		        in ComponentDataFromEntity<MetaDataTileComponent> allMetaDataTile,
-		        ref BufferFromEntity<GasDataBuffer> allGasData,
+		        ref ComponentLookup<GasMixComponent> allGasMix,
+		        in ComponentLookup<MetaDataTileComponent> allMetaDataTile,
+		        ref BufferLookup<GasDataBuffer> allGasData,
 		        ref GasMixComponent currentGasMix,
 		        ref DynamicBuffer<GasDataBuffer> currentGasDataBuffer,
 		        in int3 localPos)
@@ -297,17 +272,17 @@ namespace ECSAtmos.Systems
 	        private static void Equalise(
 		        in DynamicBuffer<NeighbourBuffer> neighbors,
 		        in NativeArray<bool> neighborsEqualise,
-		        ref ComponentDataFromEntity<GasMixComponent> allGasMix,
-		        ref ComponentDataFromEntity<AtmosUpdateDataComponent> allUpdateData,
-		        in ComponentDataFromEntity<MetaDataTileComponent> allMetaDataTile,
-		        ref BufferFromEntity<GasDataBuffer> allGasData,
+		        ref ComponentLookup<GasMixComponent> allGasMix,
+		        ref ComponentLookup<AtmosUpdateDataComponent> allUpdateData,
+		        in ComponentLookup<MetaDataTileComponent> allMetaDataTile,
+		        ref BufferLookup<GasDataBuffer> allGasData,
 		        ref GasMixComponent currentGasMix,
 		        ref DynamicBuffer<GasDataBuffer> currentGasDataBuffer,
 		        in Entity entity,
 		        in MetaDataTileComponent currentMetaData,
 		        ref AtmosUpdateDataComponent currentUpdateData,
 		        ref EntityCommandBuffer.ParallelWriter ecb,
-		        in int batchIndex)
+		        in int index)
 	        {
 					var dividingCount = 1;
 
@@ -354,7 +329,7 @@ namespace ECSAtmos.Systems
 						neighborTileData.Updated = true;
 
 						//Wake the neighbor tile up
-						ecb.RemoveComponent<DeactivatedTag>(batchIndex, neighborEntity);
+						ecb.RemoveComponent<DeactivatedTag>(index, neighborEntity);
 
 						var neighbourMetaTile = allMetaDataTile[neighborEntity];
 
